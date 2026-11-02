@@ -1,0 +1,17 @@
+package com.example.ausalertshake;
+import android.app.*;import android.content.*;import android.content.pm.ServiceInfo;import android.hardware.*;import android.media.*;import android.os.*;
+public class ShakeService extends Service implements SensorEventListener {
+ SensorManager sm; Sensor sensor; PowerManager.WakeLock lock; ToneGenerator tone; Handler handler=new Handler(Looper.getMainLooper());
+ final float[] gravity=new float[3]; boolean ready=false,active=false,pending=false; int axis=-1,sign=0,count=0; long first=0,last=0,trigger=0,start=0;
+ Runnable sound; static final long WINDOW=1500,COOLDOWN=30000;
+ @Override public void onCreate(){super.onCreate();sm=(SensorManager)getSystemService(SENSOR_SERVICE);sensor=sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);NotificationManager nm=getSystemService(NotificationManager.class);nm.createNotificationChannel(new NotificationChannel("monitor","Shake monitor",NotificationManager.IMPORTANCE_LOW));}
+ Notification notice(){PendingIntent pi=PendingIntent.getActivity(this,0,new Intent(this,MainActivity.class),PendingIntent.FLAG_IMMUTABLE);return new Notification.Builder(this,"monitor").setSmallIcon(android.R.drawable.ic_dialog_alert).setContentTitle("AusAlert monitoring").setContentText("Shake detector running • unofficial demo").setContentIntent(pi).setOngoing(true).build();}
+ @Override public int onStartCommand(Intent i,int f,int id){String a=i==null?"START":i.getAction();if("OFF".equals(a)){stopSelf();return START_NOT_STICKY;}if("STOP".equals(a)){stopSound();return START_STICKY;}if("TEST".equals(a)){alarm();return START_STICKY;}if(sensor==null){stopSelf();return START_NOT_STICKY;}if(Build.VERSION.SDK_INT>=34)startForeground(1,notice(),ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);else startForeground(1,notice());active=true;start=SystemClock.elapsedRealtime();sm.unregisterListener(this);sm.registerListener(this,sensor,SensorManager.SENSOR_DELAY_GAME);PowerManager pm=(PowerManager)getSystemService(POWER_SERVICE);if(lock==null){lock=pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"AusAlert:shake");lock.acquire();}return START_STICKY;}
+ void stopSound(){pending=false;handler.removeCallbacksAndMessages(null);if(tone!=null){tone.stopTone();tone.release();tone=null;}}
+ void alarm(){stopSound();pending=true;trigger=SystemClock.elapsedRealtime();sound=()->{if(!pending)return;pending=false;try{tone=new ToneGenerator(AudioManager.STREAM_ALARM,85);tone.startTone(ToneGenerator.TONE_PROP_BEEP,750);}catch(Exception ignored){}};handler.postDelayed(sound,1000);}
+ void reset(){axis=-1;sign=0;count=0;first=0;}
+ @Override public void onSensorChanged(SensorEvent e){long now=SystemClock.elapsedRealtime();float[] v=new float[3];for(int j=0;j<3;j++){if(!ready)gravity[j]=e.values[j];gravity[j]=.85f*gravity[j]+.15f*e.values[j];v[j]=e.values[j]-gravity[j];}ready=true;if(!active||pending||now-start<2000||now-trigger<COOLDOWN)return;int ax=0;for(int j=1;j<3;j++)if(Math.abs(v[j])>Math.abs(v[ax]))ax=j;float peak=v[ax];if(Math.abs(peak)<11||now-last<140)return;int s=peak>0?1:-1;if(count==0||now-first>WINDOW||ax!=axis){axis=ax;sign=s;count=1;first=now;last=now;}else if(s!=sign){sign=s;last=now;if(++count>=3){reset();alarm();}}}
+ @Override public void onAccuracyChanged(Sensor s,int a){}
+ @Override public void onDestroy(){active=false;sm.unregisterListener(this);stopSound();if(lock!=null&&lock.isHeld())lock.release();super.onDestroy();}
+ @Override public IBinder onBind(Intent i){return null;}
+}
