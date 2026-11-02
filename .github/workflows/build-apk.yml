@@ -35,6 +35,10 @@ jobs:
             "platforms;android-35" \
             "build-tools;35.0.0"
 
+      - name: Verify original alarm recording is included
+        run: |
+          test -s app/src/main/res/raw/alarm.mp3 || { echo "::error::Missing app/src/main/res/raw/alarm.mp3. Upload the original alarm before building."; exit 1; }
+
       - name: Build AusAlert APK
         run: |
           if [ -f gradlew ]; then
@@ -43,6 +47,21 @@ jobs:
           else
             gradle assembleDebug --no-daemon
           fi
+
+      - name: Verify APK contains the real alarm MP3
+        run: |
+          python3 - <<'PY'
+          import glob, zipfile, sys
+          apks=glob.glob('app/build/outputs/apk/debug/*.apk')
+          if not apks:
+              sys.exit('No APK was generated')
+          for apk in apks:
+              with zipfile.ZipFile(apk) as z:
+                  matches=[n for n in z.namelist() if n.startswith('res/raw/') and n.endswith('.mp3')]
+                  if not matches:
+                      sys.exit('APK does not contain the alarm MP3: '+apk)
+                  print('Verified real alarm MP3 in',apk, matches)
+          PY
 
       - name: Upload finished APK
         uses: actions/upload-artifact@v4
