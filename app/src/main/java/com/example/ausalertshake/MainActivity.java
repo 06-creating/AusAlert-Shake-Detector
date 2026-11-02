@@ -1,5 +1,5 @@
 package com.example.ausalertshake;
-import android.hardware.*; import android.app.*; import android.os.*; import android.content.*; import android.graphics.Color; import android.graphics.Typeface; import android.graphics.drawable.GradientDrawable; import android.view.*; import android.widget.*;
+import android.media.AudioManager; import android.hardware.*; import android.app.*; import android.os.*; import android.content.*; import android.graphics.Color; import android.graphics.Typeface; import android.graphics.drawable.GradientDrawable; import android.view.*; import android.widget.*;
 public class MainActivity extends Activity {
  LinearLayout root; TextView status; Button monitor; Switch movement; TextView sensorStatus; boolean armed;
  int bg=0xff0b1220,card=0xff192338,red=0xffff3d53;
@@ -23,6 +23,7 @@ public class MainActivity extends Activity {
  monitor=button("",red);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(65));p.topMargin=dp(18);root.addView(monitor,p);
  monitor.setOnClickListener(v->{if(!getPreferences(0).getBoolean("movement",false)){new AlertDialog.Builder(this).setTitle("Movement sensors disabled").setMessage("Enable movement sensors first to start shake detection.").setPositiveButton("OK",null).show();return;}if(!hasAccelerometer()){new AlertDialog.Builder(this).setMessage("No accelerometer is available.").setPositiveButton("OK",null).show();return;}armed=!armed;getPreferences(0).edit().putBoolean("armed",armed).apply();action(armed?"START":"OFF");refresh();});
  Button test=button("TEST ALARM (1s countdown)",card);p=new LinearLayout.LayoutParams(-1,dp(60));p.topMargin=dp(15);root.addView(test,p);test.setOnClickListener(v->action("TEST"));
+ Button volume=button("ALARM VOLUME SETTINGS",card);p=new LinearLayout.LayoutParams(-1,dp(60));p.topMargin=dp(12);root.addView(volume,p);volume.setOnClickListener(v->{try{startActivity(new Intent(android.provider.Settings.ACTION_SOUND_SETTINGS));}catch(Exception e){AudioManager am=(AudioManager)getSystemService(AUDIO_SERVICE);if(am!=null)am.adjustStreamVolume(AudioManager.STREAM_ALARM,AudioManager.ADJUST_SAME,AudioManager.FLAG_SHOW_UI);}});
  Button stop=button("STOP ALARM",card);p=new LinearLayout.LayoutParams(-1,dp(60));p.topMargin=dp(12);root.addView(stop,p);stop.setOnClickListener(v->action("STOP"));
  root.addView(label("UNOFFICIAL DEMONSTRATION • Not an Australian government emergency warning service. Screen-off shake detection depends on device sensor restrictions.",12,0xffa5b3cb));
  setContentView(scroll);refresh();if(android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},10);}}
