@@ -1,7 +1,7 @@
 package com.example.ausalertshake;
 import android.media.AudioManager; import android.hardware.*; import android.app.*; import android.os.*; import android.content.*; import android.graphics.Color; import android.graphics.Typeface; import android.graphics.drawable.GradientDrawable; import android.view.*; import android.widget.*;
-public class MainActivity extends Activity {
- LinearLayout root; TextView status; Button monitor; Switch movement; TextView sensorStatus; boolean armed;
+public class MainActivity extends Activity implements SensorEventListener {
+ LinearLayout root; TextView status; Button monitor; Switch movement; TextView sensorStatus; boolean armed; SensorManager liveSensors; Sensor liveAccelerometer; ProgressBar movementMeter; TextView movementValue,sensitivityValue; SeekBar sensitivityBar; final float[] liveGravity=new float[3]; boolean liveReady=false; long lastUiUpdate=0;
  int bg=0xff0b1220,card=0xff192338,red=0xffff3d53;
  int dp(int n){return (int)(getResources().getDisplayMetrics().density*n+.5f);}
  GradientDrawable shape(int color){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(18));return d;}
@@ -16,9 +16,16 @@ public class MainActivity extends Activity {
  TextView title=label("SHAKE TO ALERT",29,-1);title.setTypeface(null,Typeface.BOLD);root.addView(title);
  ImageView icon=new ImageView(this);icon.setImageResource(R.drawable.icon);root.addView(icon,new LinearLayout.LayoutParams(-1,dp(175)));
  status=label("",20,0xffa5b3cb);root.addView(status);
- root.addView(label("3 alternating shakes • Sensitivity 65/100\n1-second activation delay • 30-second cooldown",14,0xffa5b3cb));
+ root.addView(label("3 alternating shakes • 1-second activation delay • 30-second cooldown",14,0xffa5b3cb));
  movement=new Switch(this);movement.setText("Enable movement sensors");movement.setTextColor(-1);movement.setTextSize(18);movement.setPadding(dp(12),dp(18),dp(12),dp(12));root.addView(movement);
  sensorStatus=label("",14,0xffa5b3cb);root.addView(sensorStatus);
+ sensitivityValue=label("Shake sensitivity: 60/100",17,-1);root.addView(sensitivityValue);
+ sensitivityBar=new SeekBar(this);sensitivityBar.setMax(80);sensitivityBar.setProgress(getPreferences(0).getInt("sensitivity",60)-20);root.addView(sensitivityBar);
+ sensitivityBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar bar,int progress,boolean fromUser){int value=progress+20;sensitivityValue.setText("Shake sensitivity: "+value+"/100");if(fromUser)getPreferences(0).edit().putInt("sensitivity",value).apply();}public void onStartTrackingTouch(SeekBar bar){}public void onStopTrackingTouch(SeekBar bar){}});
+ root.addView(label("LIVE ACCELEROMETER MOVEMENT",15,-1));
+ movementMeter=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);movementMeter.setMax(100);movementMeter.setProgress(0);root.addView(movementMeter,new LinearLayout.LayoutParams(-1,dp(18)));
+ movementValue=label("Movement: 0/100",14,0xffa5b3cb);root.addView(movementValue);
+ liveSensors=(SensorManager)getSystemService(SENSOR_SERVICE);liveAccelerometer=liveSensors==null?null:liveSensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
  movement.setOnCheckedChangeListener((switchView,checked)->{if(checked&&!hasAccelerometer()){movement.setChecked(false);new AlertDialog.Builder(this).setMessage("This device has no accelerometer available.").setPositiveButton("OK",null).show();return;}getPreferences(0).edit().putBoolean("movement",checked).apply();if(!checked){getPreferences(0).edit().putBoolean("armed",false).apply();action("OFF");}refresh();});
  monitor=button("",red);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(65));p.topMargin=dp(18);root.addView(monitor,p);
  monitor.setOnClickListener(v->{if(!getPreferences(0).getBoolean("movement",false)){new AlertDialog.Builder(this).setTitle("Movement sensors disabled").setMessage("Enable movement sensors first to start shake detection.").setPositiveButton("OK",null).show();return;}if(!hasAccelerometer()){new AlertDialog.Builder(this).setMessage("No accelerometer is available.").setPositiveButton("OK",null).show();return;}armed=!armed;getPreferences(0).edit().putBoolean("armed",armed).apply();action(armed?"START":"OFF");refresh();});
@@ -27,5 +34,8 @@ public class MainActivity extends Activity {
  Button stop=button("STOP ALARM",card);p=new LinearLayout.LayoutParams(-1,dp(60));p.topMargin=dp(12);root.addView(stop,p);stop.setOnClickListener(v->action("STOP"));
  root.addView(label("UNOFFICIAL DEMONSTRATION • Not an Australian government emergency warning service. Screen-off shake detection depends on device sensor restrictions.",12,0xffa5b3cb));
  setContentView(scroll);refresh();if(android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},10);}}
- @Override protected void onResume(){super.onResume();if(status!=null)refresh();}
+ @Override protected void onResume(){super.onResume();if(status!=null)refresh();liveReady=false;if(liveSensors!=null&&liveAccelerometer!=null)liveSensors.registerListener(this,liveAccelerometer,SensorManager.SENSOR_DELAY_UI);}
+ @Override protected void onPause(){if(liveSensors!=null)liveSensors.unregisterListener(this);super.onPause();}
+ @Override public void onSensorChanged(SensorEvent e){if(e.sensor.getType()!=Sensor.TYPE_ACCELEROMETER)return;float total=0;for(int j=0;j<3;j++){if(!liveReady)liveGravity[j]=e.values[j];liveGravity[j]=.85f*liveGravity[j]+.15f*e.values[j];float linear=e.values[j]-liveGravity[j];total+=linear*linear;}liveReady=true;long now=SystemClock.elapsedRealtime();if(now-lastUiUpdate<100)return;lastUiUpdate=now;int value=Math.min(100,Math.round((float)Math.sqrt(total)*6f));if(movementMeter!=null){movementMeter.setProgress(value);movementValue.setText("Movement: "+value+"/100");}}
+ @Override public void onAccuracyChanged(Sensor sensor,int accuracy){}
 }
