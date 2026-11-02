@@ -16,14 +16,14 @@ public class MainActivity extends Activity implements SensorEventListener {
  TextView title=label("SHAKE TO ALERT",29,-1);title.setTypeface(null,Typeface.BOLD);root.addView(title);
  ImageView icon=new ImageView(this);icon.setImageResource(R.drawable.icon);root.addView(icon,new LinearLayout.LayoutParams(-1,dp(175)));
  status=label("",20,0xffa5b3cb);root.addView(status);
- root.addView(label("3 alternating shakes • 1-second activation delay • 30-second cooldown",14,0xffa5b3cb));
+ root.addView(label("3-axis movement detection • 1-second activation delay • 30-second cooldown",14,0xffa5b3cb));
  movement=new Switch(this);movement.setText("Enable movement sensors");movement.setTextColor(-1);movement.setTextSize(18);movement.setPadding(dp(12),dp(18),dp(12),dp(12));root.addView(movement);
  sensorStatus=label("",14,0xffa5b3cb);root.addView(sensorStatus);
  Switch dndSwitch=new Switch(this);dndSwitch.setText("Temporarily turn off Do Not Disturb while monitoring");dndSwitch.setTextColor(-1);dndSwitch.setTextSize(15);dndSwitch.setChecked(getPreferences(0).getBoolean("dnd_override",false));root.addView(dndSwitch);
  dndSwitch.setOnCheckedChangeListener((v,checked)->{getPreferences(0).edit().putBoolean("dnd_override",checked).apply();if(checked){NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);if(nm!=null&&!nm.isNotificationPolicyAccessGranted()){new AlertDialog.Builder(this).setTitle("Allow Do Not Disturb access").setMessage("Grant AusAlert Do Not Disturb access in Android settings, then return to the app. This is needed to turn it off during monitoring.").setPositiveButton("Open settings",(d,w)->startActivity(new Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))).setNegativeButton("Later",null).show();}}});
- sensitivityValue=label("Shake sensitivity: 60/100",17,-1);root.addView(sensitivityValue);
+ sensitivityValue=label("Movement sensitivity: 60/100",17,-1);root.addView(sensitivityValue);
  sensitivityBar=new SeekBar(this);sensitivityBar.setMax(80);sensitivityBar.setProgress(getPreferences(0).getInt("sensitivity",60)-20);root.addView(sensitivityBar);
- sensitivityBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar bar,int progress,boolean fromUser){int value=progress+20;sensitivityValue.setText("Shake sensitivity: "+value+"/100");if(fromUser)getPreferences(0).edit().putInt("sensitivity",value).apply();}public void onStartTrackingTouch(SeekBar bar){}public void onStopTrackingTouch(SeekBar bar){}});
+ sensitivityBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar bar,int progress,boolean fromUser){int value=progress+20;sensitivityValue.setText("Movement sensitivity: "+value+"/100");if(fromUser)getPreferences(0).edit().putInt("sensitivity",value).apply();}public void onStartTrackingTouch(SeekBar bar){}public void onStopTrackingTouch(SeekBar bar){}});
  root.addView(label("LIVE ACCELEROMETER MOVEMENT",15,-1));
  movementMeter=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);movementMeter.setMax(100);movementMeter.setProgress(0);root.addView(movementMeter,new LinearLayout.LayoutParams(-1,dp(18)));
  movementValue=label("Movement: 0/100",14,0xffa5b3cb);root.addView(movementValue);
