@@ -7,7 +7,7 @@ public class MainActivity extends Activity {
  GradientDrawable shape(int color){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(18));return d;}
  TextView label(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setGravity(Gravity.CENTER);t.setPadding(dp(12),dp(14),dp(12),dp(14));return t;}
  Button button(String s,int color){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextColor(-1);b.setTextSize(17);b.setTypeface(null,Typeface.BOLD);b.setBackground(shape(color));return b;}
- void action(String a){Intent i=new Intent(this,ShakeService.class).setAction(a);if(a.equals("START"))startForegroundService(i);else if(a.equals("OFF"))stopService(new Intent(this,ShakeService.class));else startService(i);}
+ void action(String a){Intent i=new Intent(this,ShakeService.class).setAction(a);if(a.equals("START"))startForegroundService(i);else if(a.equals("OFF"))stopService(new Intent(this,ShakeService.class));else startForegroundService(i);}
  boolean hasAccelerometer(){SensorManager sm=(SensorManager)getSystemService(SENSOR_SERVICE);return sm!=null&&sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)!=null;}
  void refresh(){if(movement!=null){boolean enabled=getPreferences(0).getBoolean("movement",false);movement.setChecked(enabled);sensorStatus.setText(!hasAccelerometer()?"Accelerometer not available on this device":enabled?"Movement sensor monitoring enabled":"Movement sensor monitoring disabled");}armed=getPreferences(0).getBoolean("armed",false);status.setText(armed?"● MONITORING ACTIVE":"○ MONITORING OFF");status.setTextColor(armed?0xff62e5b0:0xffa5b3cb);monitor.setText(armed?"STOP MONITORING":"START MONITORING");}
  @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);
@@ -25,6 +25,6 @@ public class MainActivity extends Activity {
  Button test=button("TEST ALARM (1s countdown)",card);p=new LinearLayout.LayoutParams(-1,dp(60));p.topMargin=dp(15);root.addView(test,p);test.setOnClickListener(v->action("TEST"));
  Button stop=button("STOP ALARM",card);p=new LinearLayout.LayoutParams(-1,dp(60));p.topMargin=dp(12);root.addView(stop,p);stop.setOnClickListener(v->action("STOP"));
  root.addView(label("UNOFFICIAL DEMONSTRATION • Not an Australian government emergency warning service. Screen-off shake detection depends on device sensor restrictions.",12,0xffa5b3cb));
- setContentView(scroll);refresh();}
+ setContentView(scroll);refresh();if(android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},10);}}
  @Override protected void onResume(){super.onResume();if(status!=null)refresh();}
 }
